@@ -1,0 +1,58 @@
+name: LLM Code Review
+
+on:
+  pull_request:
+    branches: [ main, master ] # Adjust to your main branch name
+
+permissions:
+  contents: read # Allows checkout of the repository
+
+jobs:
+  code-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history to allow diffing against base branch
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # You can choose your preferred Python version
+
+      - name: Install Dependencies
+        run: pip install requests
+
+      - name: Generate Diff
+        id: git_diff
+        run: |
+          echo "Fetching base branch ${{ github.event.pull_request.base.ref }}..."
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+          echo "Generating diff between HEAD and ${{ github.event.pull_request.base.sha }}..."
+          # The command below generates a diff and stores it in changes.diff
+          # It also handles the case where the diff might be empty
+          git diff --no-prefix "origin/${{ github.event.pull_request.base.ref }}" ${{ github.sha }} > changes.diff || echo "No changes found or diff command failed."
+          
+          # Output the diff file name for the next step
+          echo "diff_file=changes.diff" >> $GITHUB_OUTPUT
+          
+          echo "Diff generated:"
+          cat changes.diff
+
+
+      - name: Call LLM for Review
+        id: llm_review
+        run: |
+          python .github/scripts/get_llm_review.py ${{ steps.git_diff.outputs.diff_file }} llm_review.md
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_ENDPOINT: "YOUR_LLM_API_ENDPOINT_HERE" # Replace with your LLM's API endpoint
+          LLM_MODEL_NAME: "YOUR_LLM_MODEL_NAME_HERE" # Replace with your LLM's model name (e.g., gpt-4, claude-3-opus-20240229)
+
+      - name: Upload Review Document
+        if: success() || failure() # Upload artifact even if the LLM review script fails, to capture any error messages
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-code-review-report
+          path: llm_review.md
