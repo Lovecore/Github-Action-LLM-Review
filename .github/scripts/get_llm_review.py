@@ -58,10 +58,12 @@ Please perform a security and design review of the following Python code file.
 Focus on:
 1.  **Security Vulnerabilities**: Identify potential issues like injection flaws, XSS, CSRF, insecure data handling, hardcoded secrets, authentication/authorization bypasses, etc.
 2.  **Design Flaws**: Look for anti-patterns, code smells, poor readability, lack of modularity, performance bottlenecks, and deviations from best practices.
-3.  **Maintainability & Scalability**: Assess if the code is easy to understand, maintain, and scale.
 
-Provide clear, concise, and actionable feedback. If possible, suggest improvements or alternatives.
-If no significant issues are found, please state that.
+Provide a table at the end of the review with the following columns:
+- **Issue**: A brief description of the issue.
+- **Risk**: The severity of the issue (e.g., Low, Medium, High).
+- **Recommendation**: Suggested improvements or alternatives.   
+- **Code Snippet**: The code snippet that is causing the issue.
 
 ```python
 {code_content}
