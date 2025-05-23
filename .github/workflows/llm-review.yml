@@ -46,7 +46,7 @@ jobs:
         run: |
           set -e
           echo "Finding changed Python files in the PR..."
-          git diff --name-only origin/${{ github.event.pull_request.base.ref }} ${{ github.sha }} | grep '\.py$' > changed_py_files.txt || true
+          git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.py$' > changed_py_files.txt || true
           if [ ! -s changed_py_files.txt ]; then
             echo "No Python files changed. Skipping analysis."
             exit 0
