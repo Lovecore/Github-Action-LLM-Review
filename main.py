@@ -45,3 +45,11 @@ async def hello():
 @app.get("/hello/{name}")
 async def hello_name(name: str):
     return {"message": f"Hello, {name}!"}
+
+@app.get("/vulnerable")
+async def vulnerable():
+    return {"message": "This is a test endpoint TEST ENDPOINT WIHT BAD CODE"}
+
+@app.get("/vulnerable/{name}")
+async def vulnerable_name(name: str):
+    return {"message": f"This is a test endpoint TEST ENDPOINT WIHT BAD CODE {name}"}
