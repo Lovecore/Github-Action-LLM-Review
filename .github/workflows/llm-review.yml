@@ -41,18 +41,30 @@ jobs:
           cat changes.diff
 
 
-      - name: Call LLM for Review
-        id: llm_review
+      - name: Analyze Changed Python Files
+        id: analyze_py_files
         run: |
-          python .github/scripts/get_llm_review.py ${{ steps.git_diff.outputs.diff_file }} llm_review.md
+          set -e
+          echo "Finding changed Python files in the PR..."
+          git diff --name-only origin/${{ github.event.pull_request.base.ref }} ${{ github.sha }} | grep '\.py$' > changed_py_files.txt || true
+          if [ ! -s changed_py_files.txt ]; then
+            echo "No Python files changed. Skipping analysis."
+            exit 0
+          fi
+          while IFS= read -r file; do
+            echo "Analyzing $file..."
+            # Replace / with _ for the output filename
+            safe_file_name=$(echo "$file" | tr '/' '_')
+            python .github/scripts/get_llm_review.py "$file" "llm_review_${safe_file_name}.md"
+          done < changed_py_files.txt
         env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }} # Need these
-          LLM_ENDPOINT: ${{ vars.LLM_ENDPOINT }}         
-          LLM_MODEL_NAME: ${{ vars.LLM_MODEL_NAME }}  
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_ENDPOINT: ${{ vars.LLM_ENDPOINT }}
+          LLM_MODEL_NAME: ${{ vars.LLM_MODEL_NAME }}
 
-      - name: Upload Review Document
-        if: success() || failure() # Upload artifact even if the LLM review script fails, to capture any error messages
+      - name: Upload Review Documents
+        if: success() || failure()
         uses: actions/upload-artifact@v4
         with:
           name: llm-code-review-report
-          path: llm_review.md
+          path: llm_review_*.md
