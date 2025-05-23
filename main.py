@@ -49,3 +49,7 @@ async def hello_name(name: str):
 @app.get("/vulnerable")
 async def vulnerable():
     return {"message": "This is a vulnerable endpoint!"}
+
+@app.get("/vulnerable/{name}")
+async def vulnerable_name(name: str):
+    return {"message": f"Hello, {name}!"}
