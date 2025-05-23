@@ -54,4 +54,6 @@ async def vulnerable():
 async def vulnerable_name(name: str):
     return {"message": f"This is a test endpoint TEST ENDPOINT WIHT BAD CODE {name}"}
 
-    
+@app.get("/vulnerable")
+async def vulnerable():
+    return {"message": "This is a test endpoint TEST ENDPOINT WIHT BAD CODE"}   
