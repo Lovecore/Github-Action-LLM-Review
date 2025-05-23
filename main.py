@@ -41,3 +41,7 @@ async def health_check():
 @app.get("/hello")
 async def hello():
     return {"message": "Hello, World!"}
+
+@app.get("/hello/{name}")
+async def hello_name(name: str):
+    return {"message": f"Hello, {name}!"}
