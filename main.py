@@ -36,3 +36,8 @@ async def create_item(item: Item):
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+
+
+@app.get("/hello")
+async def hello():
+    return {"message": "Hello, World!"}
