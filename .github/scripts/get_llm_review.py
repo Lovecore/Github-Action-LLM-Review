@@ -1,7 +1,7 @@
 # .github/scripts/get_llm_review.py
 import os
 import sys
-import openai
+from openai import OpenAI
 import os
 import sys
 import json
@@ -81,31 +81,20 @@ Review:
             "Content-Type": "application/json"
             # Add other headers your LLM might need. For example, Anthropic requires 'x-api-key' and 'anthropic-version'.
             # "anthropic-version": "2024-6-01" # Example for Anthropic
-        }
 
-        # This payload structure is a GENERIC EXAMPLE and likely needs to be changed.
-        # Consult your LLM provider's API documentation.
-        #
-        # Example for OpenAI (Chat Completions API):
-        # payload = {
-        #     "model": model_name,
-        #     "messages": [{"role": "user", "content": prompt}],
-        #     "max_tokens": 2048,
-        #     "temperature": 0.3
         try:
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model=model_name,
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=2048,
                 temperature=0.3,
             )
-            review_text = response["choices"][0]["message"]["content"]
+            review_text = response.choices[0].message.content
         except Exception as e:
             review_text = f"Error calling OpenAI API: {type(e).__name__}: {e}"
 
         review_content = review_text.strip()
 
-    except requests.exceptions.HTTPError as http_err:
         review_content = (
             f"HTTP error occurred: {http_err}\nResponse Content: "
             f"{http_err.response.text if http_err.response else 'No response content'}"
