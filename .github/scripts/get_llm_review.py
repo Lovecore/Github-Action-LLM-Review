@@ -51,18 +51,19 @@ If no significant issues are found, please state that.
 
 ```diff
 {diff_content}
+```
 
 Review:
-""" 
+"""
         # --- LLM API Call (NEEDS HEAVY CUSTOMIZATION) ---
         # This section is HIGHLY DEPENDENT on the LLM API you are using.
         # You MUST adapt the headers, payload, and response parsing to your specific LLM.
 
         headers = {
-            "Authorization": f"Bearer {api_key}", # Common for many APIs using Bearer tokens
-            "Content-Type": "application/json"
+            "Authorization": f"Bearer {api_key}",  # Common for many APIs using Bearer tokens
+            "Content-Type": "application/json"  # Standard Content-Type for JSON APIs
             # Add other headers your LLM might need. For example, Anthropic requires 'x-api-key' and 'anthropic-version'.
-            # "anthropic-version": "2024-6-01" # Example for Anthropic
+            # "anthropic-version": "2023-06-01"  # Example for Anthropic
         }
 
         # This payload structure is a GENERIC EXAMPLE and likely needs to be changed.
@@ -87,10 +88,10 @@ Review:
         # ADAPT THIS PAYLOAD TO YOUR LLM:
         payload = {
             "model": model_name,
-            "messages": [{"role": "user", "content": prompt}], # Common pattern
-            # "prompt": prompt, # Some older APIs might use this directly
-            "max_tokens": 3000, # Adjust based on expected review length and model limits
-            "temperature": 0.2  # Lower temperature for more deterministic, factual reviews
+            "messages": [{"role": "user", "content": prompt}],  # Common pattern
+            # "prompt": prompt,  # Some older APIs might use this directly
+            "max_tokens": 3000,  # Adjust based on expected review length and model limits
+            "temperature": 0.2   # Lower temperature for more deterministic, factual reviews
         }
 
         print(f"Sending request to LLM endpoint: {llm_endpoint} with model: {model_name}")
@@ -98,17 +99,16 @@ Review:
         response = requests.post(llm_endpoint, headers=headers, json=payload, timeout=300)
         response.raise_for_status() # This will raise an HTTPError for bad responses (4XX or 5XX)
 
-    # --- Parse LLM Response (NEEDS HEAVY CUSTOMIZATION) ---
-    # This part is also HIGHLY DEPENDENT on your LLM's API response format.
-    #
-    # Example for OpenAI (Chat Completions API):
-    # review_text = response.json()['choices'][0]['message']['content']
-    #
-    # Example for Anthropic Claude:
-    # review_text = response.json()['content'][0]['text']
-    #
-    # ADAPT THIS PARSING LOGIC:
-    try:
+        # --- Parse LLM Response (NEEDS HEAVY CUSTOMIZATION) ---
+        # This part is also HIGHLY DEPENDENT on your LLM's API response format.
+        #
+        # Example for OpenAI (Chat Completions API):
+        # review_text = response.json()['choices'][0]['message']['content']
+        #
+        # Example for Anthropic Claude:
+        # review_text = response.json()['content'][0]['text']
+        #
+        # ADAPT THIS PARSING LOGIC:
         response_data = response.json()
         # Try OpenAI-like structure first
         if 'choices' in response_data and response_data['choices'] and 'message' in response_data['choices'][0] and 'content' in response_data['choices'][0]['message']:
@@ -122,11 +122,11 @@ Review:
         else:
             review_text = f"Error: Could not parse review from LLM response using common patterns. Raw response: \n{json.dumps(response_data, indent=2)}"
 
-    except (json.JSONDecodeError, KeyError, IndexError, TypeError) as parse_error:
-        review_text = f"Error parsing LLM JSON response: {parse_error}. \nRaw response text: \n{response.text}"
+        review_content = review_text.strip()
 
-    review_content = review_text.strip()
-
+except (json.JSONDecodeError, KeyError, IndexError, TypeError) as parse_error:
+    review_content = f"Error parsing LLM JSON response: {parse_error}. \nRaw response text: \n{response.text if 'response' in locals() else ''}"
+    print(review_content)
 except requests.exceptions.Timeout:
     review_content = "Error: The request to the LLM API timed out after 5 minutes."
     print(review_content)
