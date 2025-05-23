@@ -46,9 +46,9 @@ jobs:
         run: |
           python .github/scripts/get_llm_review.py ${{ steps.git_diff.outputs.diff_file }} llm_review.md
         env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_ENDPOINT: "YOUR_LLM_API_ENDPOINT_HERE" # Replace with your LLM's API endpoint
-          LLM_MODEL_NAME: "YOUR_LLM_MODEL_NAME_HERE" # Replace with your LLM's model name (e.g., gpt-4, claude-3-opus-20240229)
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }} # Need these
+          LLM_ENDPOINT: ${{ vars.LLM_ENDPOINT }}         
+          LLM_MODEL_NAME: ${{ vars.LLM_MODEL_NAME }}  
 
       - name: Upload Review Document
         if: success() || failure() # Upload artifact even if the LLM review script fails, to capture any error messages

@@ -179,7 +179,9 @@ Review:
         print(review_content)
     finally:
         # Ensure output directory exists
-        os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
+        output_dir = os.path.dirname(output_file_path)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
 
         # Always write the result (either the review or error message) to the output file
         with open(output_file_path, 'w', encoding='utf-8') as outfile:
