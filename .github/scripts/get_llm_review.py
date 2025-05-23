@@ -9,41 +9,50 @@ def get_llm_review(diff_file_path, output_file_path):
     Sends code diff to an LLM for review and saves the review.
     """
     review_content = "No review generated."
-    
     try:
-        # Get API credentials from environment variables
-        api_key = os.environ['LLM_API_KEY']
+        # Get secrets/env vars in a robust way for GitHub Actions
+        api_key = os.environ.get('LLM_API_KEY')
         llm_endpoint = os.environ.get('LLM_ENDPOINT')
         model_name = os.environ.get('LLM_MODEL_NAME')
 
-        # Validate environment variables
+        missing_vars = []
+        if not api_key:
+            missing_vars.append('LLM_API_KEY')
         if not llm_endpoint or llm_endpoint == "YOUR_LLM_API_ENDPOINT_HERE":
-            review_content = "Error: LLM_ENDPOINT environment variable is not set or is a placeholder. Please configure it in the GitHub Action workflow."
-            print(review_content)
-            with open(output_file_path, 'w') as outfile:
-                outfile.write(review_content)
-            return 1
-
+            missing_vars.append('LLM_ENDPOINT')
         if not model_name or model_name == "YOUR_LLM_MODEL_NAME_HERE":
-            review_content = "Error: LLM_MODEL_NAME environment variable is not set or is a placeholder. Please configure it."
+            missing_vars.append('LLM_MODEL_NAME')
+
+        if missing_vars:
+            review_content = (
+                f"Error: The following required environment variables are missing or not set properly: {', '.join(missing_vars)}.\n"
+                f"Current values:\n"
+                f"  LLM_API_KEY: {'set' if api_key else 'NOT SET'}\n"
+                f"  LLM_ENDPOINT: {llm_endpoint or 'NOT SET'}\n"
+                f"  LLM_MODEL_NAME: {model_name or 'NOT SET'}\n\n"
+                "In your GitHub workflow, set these with:")
+            review_content += '''\n
+      env:
+        LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        LLM_ENDPOINT: ${{ secrets.LLM_ENDPOINT }}
+        LLM_MODEL_NAME: ${{ secrets.LLM_MODEL_NAME }}
+'''
             print(review_content)
             with open(output_file_path, 'w') as outfile:
                 outfile.write(review_content)
-            return 1
+            sys.exit(1)
 
-        # Read the diff file
         with open(diff_file_path, 'r', encoding='utf-8') as f:
             diff_content = f.read()
 
-        # Check if diff is empty
         if not diff_content.strip():
             print("No code changes detected in the diff. Skipping LLM review.")
             review_content = "No code changes detected to review."
             with open(output_file_path, 'w', encoding='utf-8') as outfile:
                 outfile.write(review_content)
-            return 0
+            return
 
-        # Prepare the prompt for the LLM
+        # IMPORTANT: Customize this prompt for your needs and your specific LLM.
         prompt = f"""You are an expert AI code reviewer.
 Please perform a security and design review of the following code changes, provided in a 'git diff' format.
 Focus on:
@@ -56,95 +65,116 @@ If no significant issues are found, please state that.
 
 ```diff
 {diff_content}
-```
 
 Review:
-"""
+""" 
+        # --- LLM API Call (NEEDS HEAVY CUSTOMIZATION) ---
+        # This section is HIGHLY DEPENDENT on the LLM API you are using.
+        # You MUST adapt the headers, payload, and response parsing to your specific LLM.
 
-        # Prepare headers for API request
         headers = {
-            "Authorization": f"Bearer {api_key}",  # Common for many APIs using Bearer tokens
-            "Content-Type": "application/json"    # Standard Content-Type for JSON APIs
+            "Authorization": f"Bearer {api_key}", # Common for many APIs using Bearer tokens
+            "Content-Type": "application/json"
+            # Add other headers your LLM might need. For example, Anthropic requires 'x-api-key' and 'anthropic-version'.
+            # "anthropic-version": "2024-6-01" # Example for Anthropic
         }
 
-        # Prepare payload for API request (adapt to your LLM provider)
+        # This payload structure is a GENERIC EXAMPLE and likely needs to be changed.
+        # Consult your LLM provider's API documentation.
+        #
+        # Example for OpenAI (Chat Completions API):
+        # payload = {
+        #     "model": model_name,
+        #     "messages": [{"role": "user", "content": prompt}],
+        #     "max_tokens": 2048,
+        #     "temperature": 0.3
+        # }
+        #
+        # Example for Anthropic Claude:
+        # payload = {
+        #     "model": model_name,
+        #     "messages": [{"role": "user", "content": prompt}],
+        #     "max_tokens": 2048,
+        #     "system": "You are an expert AI code reviewer." # System prompt can sometimes be separate
+        # }
+        #
+        # ADAPT THIS PAYLOAD TO YOUR LLM:
         payload = {
             "model": model_name,
-            "messages": [{"role": "user", "content": prompt}],  # Common pattern for chat models
-            "max_tokens": 3000,                                   # Adjust based on expected review length
-            "temperature": 0.2                                    # Lower for more deterministic reviews
+            "messages": [{"role": "user", "content": prompt}], # Common pattern
+            # "prompt": prompt, # Some older APIs might use this directly
+            "max_tokens": 3000, # Adjust based on expected review length and model limits
+            "temperature": 0.2  # Lower temperature for more deterministic, factual reviews
         }
 
-        # Send request to LLM API
         print(f"Sending request to LLM endpoint: {llm_endpoint} with model: {model_name}")
+        # Consider adding a timeout, e.g., timeout=300 (for 5 minutes)
         response = requests.post(llm_endpoint, headers=headers, json=payload, timeout=300)
-        response.raise_for_status()  # Raise exception for HTTP errors
+        response.raise_for_status() # This will raise an HTTPError for bad responses (4XX or 5XX)
 
-        # Parse the LLM response
+    # --- Parse LLM Response (NEEDS HEAVY CUSTOMIZATION) ---
+    # This part is also HIGHLY DEPENDENT on your LLM's API response format.
+    #
+    # Example for OpenAI (Chat Completions API):
+    # review_text = response.json()['choices'][0]['message']['content']
+    #
+    # Example for Anthropic Claude:
+    # review_text = response.json()['content'][0]['text']
+    #
+    # ADAPT THIS PARSING LOGIC:
+    try:
         response_data = response.json()
-        
-        # Extract review text based on LLM provider format
-        # OpenAI format
+        # Try OpenAI-like structure first
         if 'choices' in response_data and response_data['choices'] and 'message' in response_data['choices'][0] and 'content' in response_data['choices'][0]['message']:
             review_text = response_data['choices'][0]['message']['content']
-        # Anthropic Claude format
-        elif 'content' in response_data and response_data['content'] and len(response_data['content']) > 0 and 'text' in response_data['content'][0]:
+        # Try Anthropic Claude-like structure
+        elif 'content' in response_data and response_data['content'] and 'text' in response_data['content'][0]:
             review_text = response_data['content'][0]['text']
-        # Generic fallback
+        # Add other parsing logic for different LLMs as needed
+        # else:
+        # review_text = response_data.get("review", "Error: Could not parse 'review' field from LLM response.") # Generic fallback
         else:
-            review_text = f"Error: Could not parse review from LLM response using common patterns. Raw response:\n{json.dumps(response_data, indent=2)}"
+            review_text = f"Error: Could not parse review from LLM response using common patterns. Raw response: \n{json.dumps(response_data, indent=2)}"
 
-        review_content = review_text.strip()
-        
-    except KeyError as key_err:
-        # Handle missing environment variables
-        review_content = f"Error: Missing critical environment variable: {key_err}. Please ensure all required variables (LLM_API_KEY, LLM_ENDPOINT, LLM_MODEL_NAME) are set."
-        print(review_content)
-    except json.JSONDecodeError as json_err:
-        # Handle invalid JSON response
-        review_content = f"Error parsing LLM JSON response: {json_err}. \nRaw response text:\n{response.text if 'response' in locals() else 'No response available'}"
-        print(review_content)
-    except requests.exceptions.Timeout:
-        # Handle timeout errors
-        review_content = "Error: The request to the LLM API timed out after 5 minutes."
-        print(review_content)
-    except requests.exceptions.HTTPError as http_err:
-        # Handle HTTP errors
-        review_content = f"HTTP error occurred: {http_err}\nResponse Content: {http_err.response.text if hasattr(http_err, 'response') and http_err.response else 'No response content'}"
-        print(review_content)
-    except requests.exceptions.RequestException as req_err:
-        # Handle other request errors
-        review_content = f"Error calling LLM API: {req_err}"
-        print(review_content)
-    except Exception as e:
-        # Handle any other unexpected errors
-        review_content = f"An unexpected error occurred: {type(e).__name__} - {e}"
-        print(review_content)
-    finally:
-        # Ensure output directory exists
-        output_dir = os.path.dirname(output_file_path)
-        if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
-        
-        # Write results to output file
-        with open(output_file_path, 'w', encoding='utf-8') as outfile:
-            outfile.write(review_content)
-        
-        # Report result
-        if "Error:" in review_content:
-            print(f"LLM review script finished with errors. Output written to {output_file_path}")
-            return 1
-        else:
-            print(f"Review successfully generated and written to {output_file_path}")
-            return 0
+    except (json.JSONDecodeError, KeyError, IndexError, TypeError) as parse_error:
+        review_text = f"Error parsing LLM JSON response: {parse_error}. \nRaw response text: \n{response.text}"
 
-# Main entry point
+    review_content = review_text.strip()
+
+except requests.exceptions.Timeout:
+    review_content = "Error: The request to the LLM API timed out after 5 minutes."
+    print(review_content)
+except requests.exceptions.HTTPError as http_err:
+    review_content = f"HTTP error occurred: {http_err}\nResponse Content: {http_err.response.text if http_err.response else 'No response content'}"
+    print(review_content)
+except requests.exceptions.RequestException as req_err:
+    review_content = f"Error calling LLM API (RequestException): {req_err}"
+    print(review_content)
+except KeyError as key_err: # Should be caught by earlier checks, but as a safeguard
+    review_content = f"Error: Missing critical environment variable: {key_err}. Please ensure all required variables (LLM_API_KEY, LLM_ENDPOINT, LLM_MODEL_NAME) are set."
+    print(review_content)
+except Exception as e:
+    review_content = f"An unexpected error occurred in the LLM script: {type(e).__name__} - {e}"
+    print(review_content)
+finally:
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_file_path), exist_ok=True)
+    
+    # Always write the result (either the review or error message) to the output file
+    with open(output_file_path, 'w', encoding='utf-8') as outfile:
+        outfile.write(review_content)
+    
+    if "Error:" in review_content:
+        print(f"LLM review script finished with errors. Output written to {output_file_path}")
+        return 1
+    else:
+        print(f"Review successfully generated and written to {output_file_path}")
+        return 0
+
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         print("Usage: python get_llm_review.py <diff_file_path> <output_file_path>")
         sys.exit(1)
-    
     diff_file_path = sys.argv[1]
     output_file_path = sys.argv[2]
-    exit_code = get_llm_review(diff_file_path, output_file_path)
-    sys.exit(exit_code)
+    sys.exit(get_llm_review(diff_file_path, output_file_path))
