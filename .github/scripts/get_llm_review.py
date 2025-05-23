@@ -54,49 +54,49 @@ If no significant issues are found, please state that.
 
 Review:
 """ 
-    # --- LLM API Call (NEEDS HEAVY CUSTOMIZATION) ---
-    # This section is HIGHLY DEPENDENT on the LLM API you are using.
-    # You MUST adapt the headers, payload, and response parsing to your specific LLM.
+        # --- LLM API Call (NEEDS HEAVY CUSTOMIZATION) ---
+        # This section is HIGHLY DEPENDENT on the LLM API you are using.
+        # You MUST adapt the headers, payload, and response parsing to your specific LLM.
 
-    headers = {
-        "Authorization": f"Bearer {api_key}", # Common for many APIs using Bearer tokens
-        "Content-Type": "application/json"
-        # Add other headers your LLM might need. For example, Anthropic requires 'x-api-key' and 'anthropic-version'.
-        # "anthropic-version": "2024-6-01" # Example for Anthropic
-    }
+        headers = {
+            "Authorization": f"Bearer {api_key}", # Common for many APIs using Bearer tokens
+            "Content-Type": "application/json"
+            # Add other headers your LLM might need. For example, Anthropic requires 'x-api-key' and 'anthropic-version'.
+            # "anthropic-version": "2024-6-01" # Example for Anthropic
+        }
 
-    # This payload structure is a GENERIC EXAMPLE and likely needs to be changed.
-    # Consult your LLM provider's API documentation.
-    #
-    # Example for OpenAI (Chat Completions API):
-    # payload = {
-    #     "model": model_name,
-    #     "messages": [{"role": "user", "content": prompt}],
-    #     "max_tokens": 2048,
-    #     "temperature": 0.3
-    # }
-    #
-    # Example for Anthropic Claude:
-    # payload = {
-    #     "model": model_name,
-    #     "messages": [{"role": "user", "content": prompt}],
-    #     "max_tokens": 2048,
-    #     "system": "You are an expert AI code reviewer." # System prompt can sometimes be separate
-    # }
-    #
-    # ADAPT THIS PAYLOAD TO YOUR LLM:
-    payload = {
-        "model": model_name,
-        "messages": [{"role": "user", "content": prompt}], # Common pattern
-        # "prompt": prompt, # Some older APIs might use this directly
-        "max_tokens": 3000, # Adjust based on expected review length and model limits
-        "temperature": 0.2  # Lower temperature for more deterministic, factual reviews
-    }
+        # This payload structure is a GENERIC EXAMPLE and likely needs to be changed.
+        # Consult your LLM provider's API documentation.
+        #
+        # Example for OpenAI (Chat Completions API):
+        # payload = {
+        #     "model": model_name,
+        #     "messages": [{"role": "user", "content": prompt}],
+        #     "max_tokens": 2048,
+        #     "temperature": 0.3
+        # }
+        #
+        # Example for Anthropic Claude:
+        # payload = {
+        #     "model": model_name,
+        #     "messages": [{"role": "user", "content": prompt}],
+        #     "max_tokens": 2048,
+        #     "system": "You are an expert AI code reviewer." # System prompt can sometimes be separate
+        # }
+        #
+        # ADAPT THIS PAYLOAD TO YOUR LLM:
+        payload = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": prompt}], # Common pattern
+            # "prompt": prompt, # Some older APIs might use this directly
+            "max_tokens": 3000, # Adjust based on expected review length and model limits
+            "temperature": 0.2  # Lower temperature for more deterministic, factual reviews
+        }
 
-    print(f"Sending request to LLM endpoint: {llm_endpoint} with model: {model_name}")
-    # Consider adding a timeout, e.g., timeout=300 (for 5 minutes)
-    response = requests.post(llm_endpoint, headers=headers, json=payload, timeout=300)
-    response.raise_for_status() # This will raise an HTTPError for bad responses (4XX or 5XX)
+        print(f"Sending request to LLM endpoint: {llm_endpoint} with model: {model_name}")
+        # Consider adding a timeout, e.g., timeout=300 (for 5 minutes)
+        response = requests.post(llm_endpoint, headers=headers, json=payload, timeout=300)
+        response.raise_for_status() # This will raise an HTTPError for bad responses (4XX or 5XX)
 
     # --- Parse LLM Response (NEEDS HEAVY CUSTOMIZATION) ---
     # This part is also HIGHLY DEPENDENT on your LLM's API response format.
