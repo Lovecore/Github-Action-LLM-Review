@@ -53,7 +53,3 @@ async def vulnerable():
 @app.get("/vulnerable/{name}")
 async def vulnerable_name(name: str):
     return {"message": f"Hello, {name}!"}
-
-@app.get("/failure")
-async def failure():
-    return {"message": "This is a failure endpoint!"}
