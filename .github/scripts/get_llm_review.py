@@ -1,10 +1,8 @@
 # .github/scripts/get_llm_review.py
 import os
 import sys
-from openai import OpenAI
-import os
-import sys
 import json
+from openai import OpenAI
 
 def get_llm_review(code_file_path, output_file_path):
     """
@@ -76,13 +74,12 @@ Review:
         # This section is HIGHLY DEPENDENT on the LLM API you are using.
         # You MUST adapt the headers, payload, and response parsing to your specific LLM.
 
-        headers = {
-            "Authorization": f"Bearer {api_key}",  # Common for many APIs using Bearer tokens
-            "Content-Type": "application/json"
-            # Add other headers your LLM might need. For example, Anthropic requires 'x-api-key' and 'anthropic-version'.
-            # "anthropic-version": "2024-6-01" # Example for Anthropic
-
+        # Use OpenAI v1+ python library interface
         try:
+            client = OpenAI(api_key=api_key)
+            # Optionally set api_base if using a custom endpoint
+            if llm_endpoint and llm_endpoint != "https://api.openai.com/v1/chat/completions":
+                client.base_url = llm_endpoint.rstrip("/chat/completions")
             response = client.chat.completions.create(
                 model=model_name,
                 messages=[{"role": "user", "content": prompt}],
@@ -94,11 +91,6 @@ Review:
             review_text = f"Error calling OpenAI API: {type(e).__name__}: {e}"
 
         review_content = review_text.strip()
-
-        review_content = (
-            f"HTTP error occurred: {http_err}\nResponse Content: "
-            f"{http_err.response.text if http_err.response else 'No response content'}"
-        )
         print(review_content)
     except requests.exceptions.RequestException as req_err:
         review_content = f"Error calling LLM API (RequestException): {req_err}"
